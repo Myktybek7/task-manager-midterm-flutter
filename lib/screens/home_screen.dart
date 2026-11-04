@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,43 +9,13 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   void showAddTaskDialog(BuildContext context) {
-    final controller = TextEditingController();
     final taskBloc = context.read<TaskBloc>();
-
     showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Add New Task'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Enter task title',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final title = controller.text.trim();
-
-                if (title.isNotEmpty) {
-                  taskBloc.add(AddTask(title));
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(controller.dispose);
+      builder: (_) => _AddTaskDialog(onAdd: (title) {
+        taskBloc.add(AddTask(title));
+      }),
+    );
   }
 
   @override
@@ -109,6 +78,53 @@ class HomeScreen extends StatelessWidget {
         onPressed: () => showAddTaskDialog(context),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+class _AddTaskDialog extends StatefulWidget {
+  const _AddTaskDialog({required this.onAdd});
+
+  final ValueChanged<String> onAdd;
+
+  @override
+  State<_AddTaskDialog> createState() => _AddTaskDialogState();
+}
+
+class _AddTaskDialogState extends State<_AddTaskDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add New Task'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(hintText: 'Enter task title'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final title = _controller.text.trim();
+            if (title.isNotEmpty) {
+              widget.onAdd(title);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('Add'),
+        ),
+      ],
     );
   }
 }
