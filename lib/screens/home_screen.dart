@@ -1,30 +1,17 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class HomeScreen extends StatefulWidget {
+import '../bloc/task_bloc.dart';
+import '../bloc/task_event.dart';
+import '../bloc/task_state.dart';
+
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final List<String> tasks = [];
-
-  void addTask(String title) {
-    setState(() {
-      tasks.add(title);
-    });
-  }
-
-  void deleteTask(int index) {
-    setState(() {
-      tasks.removeAt(index);
-    });
-  }
-
-  void showAddTaskDialog() {
+  void showAddTaskDialog(BuildContext context) {
     final controller = TextEditingController();
+    final taskBloc = context.read<TaskBloc>();
 
     showDialog<void>(
       context: context,
@@ -50,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 final title = controller.text.trim();
 
                 if (title.isNotEmpty) {
-                  addTask(title);
+                  taskBloc.add(AddTask(title));
                   Navigator.pop(dialogContext);
                 }
               },
@@ -69,32 +56,57 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('My Task Manager'),
         centerTitle: true,
       ),
-      body: tasks.isEmpty
-          ? const Center(
+      body: BlocBuilder<TaskBloc, TaskState>(
+        builder: (context, state) {
+          if (state.tasks.isEmpty) {
+            return const Center(
               child: Text('No tasks yet. Add your first task!'),
-            )
-          : ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
+            );
+          }
+
+          return ListView.builder(
+            itemCount: state.tasks.length,
+            itemBuilder: (context, index) {
+              final task = state.tasks[index];
+
+              return Card(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                child: ListTile(
+                  leading: Checkbox(
+                    value: task.isCompleted,
+                    onChanged: (_) {
+                      context.read<TaskBloc>().add(
+                        ToggleTask(task.id),
+                      );
+                    },
                   ),
-                  child: ListTile(
-                    title: Text(tasks[index]),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        deleteTask(index);
-                      },
+                  title: Text(
+                    task.title,
+                    style: TextStyle(
+                      decoration: task.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
-                );
-              },
-            ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      context.read<TaskBloc>().add(
+                        DeleteTask(task.id),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: showAddTaskDialog,
+        onPressed: () => showAddTaskDialog(context),
         child: const Icon(Icons.add),
       ),
     );
