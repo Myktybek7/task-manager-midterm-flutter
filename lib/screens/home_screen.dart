@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,25 +9,50 @@ import '../bloc/task_state.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void showAddTaskDialog(BuildContext context) {
-    final taskBloc = context.read<TaskBloc>();
-    showDialog<void>(
-      context: context,
-      builder: (_) => _AddTaskDialog(onAdd: (title) {
-        taskBloc.add(AddTask(title));
-      }),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Task Manager'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<TaskBloc>().add(const LoadTasks());
+            },
+          ),
+        ],
       ),
-      body: BlocBuilder<TaskBloc, TaskState>(
+      body: BlocConsumer<TaskBloc, TaskState>(
+        listener: (context, state) {
+          if (state.status == TaskStatus.failure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error ?? 'Something went wrong'),
+              ),
+            );
+          }
+        },
         builder: (context, state) {
+          if (state.status == TaskStatus.loading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (state.status == TaskStatus.failure &&
+              state.tasks.isEmpty) {
+            return Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  context.read<TaskBloc>().add(const LoadTasks());
+                },
+                child: const Text('Retry'),
+              ),
+            );
+          }
+
           if (state.tasks.isEmpty) {
             return const Center(
               child: Text('No tasks yet. Add your first task!'),
@@ -75,28 +101,38 @@ class HomeScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => showAddTaskDialog(context),
+        onPressed: () {
+          final taskBloc = context.read<TaskBloc>();
+
+          showDialog<void>(
+            context: context,
+            builder: (_) => AddTaskDialog(taskBloc: taskBloc),
+          );
+        },
         child: const Icon(Icons.add),
       ),
     );
   }
 }
 
-class _AddTaskDialog extends StatefulWidget {
-  const _AddTaskDialog({required this.onAdd});
+class AddTaskDialog extends StatefulWidget {
+  final TaskBloc taskBloc;
 
-  final ValueChanged<String> onAdd;
+  const AddTaskDialog({
+    super.key,
+    required this.taskBloc,
+  });
 
   @override
-  State<_AddTaskDialog> createState() => _AddTaskDialogState();
+  State<AddTaskDialog> createState() => _AddTaskDialogState();
 }
 
-class _AddTaskDialogState extends State<_AddTaskDialog> {
-  final _controller = TextEditingController();
+class _AddTaskDialogState extends State<AddTaskDialog> {
+  final TextEditingController controller = TextEditingController();
 
   @override
   void dispose() {
-    _controller.dispose();
+    controller.dispose();
     super.dispose();
   }
 
@@ -105,9 +141,11 @@ class _AddTaskDialogState extends State<_AddTaskDialog> {
     return AlertDialog(
       title: const Text('Add New Task'),
       content: TextField(
-        controller: _controller,
+        controller: controller,
         autofocus: true,
-        decoration: const InputDecoration(hintText: 'Enter task title'),
+        decoration: const InputDecoration(
+          hintText: 'Enter task title',
+        ),
       ),
       actions: [
         TextButton(
@@ -116,9 +154,10 @@ class _AddTaskDialogState extends State<_AddTaskDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            final title = _controller.text.trim();
+            final title = controller.text.trim();
+
             if (title.isNotEmpty) {
-              widget.onAdd(title);
+              widget.taskBloc.add(AddTask(title));
               Navigator.pop(context);
             }
           },
