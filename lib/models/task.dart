@@ -12,6 +12,14 @@ class Task extends Equatable {
     this.isCompleted = false,
   });
 
+  factory Task.fromJson(Map<String, dynamic> json) {
+    return Task(
+      id: json['id'] as int,
+      title: json['title'] as String,
+      isCompleted: json['isCompleted'] as bool,
+    );
+  }
+
   Task copyWith({
     String? title,
     bool? isCompleted,
