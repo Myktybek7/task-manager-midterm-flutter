@@ -46,3 +46,13 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+backend/.venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+.env
+.env.*
+!.env.example
